@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookish — Your Reading Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg: #1a1410;
+    --bg-warm: #221a14;
+    --card: #2a2018;
+    --card-hover: #33281e;
+    --accent: #d4956a;
+    --accent-glow: rgba(212,149,106,0.25);
+    --rose: #c4727a;
+    --rose-soft: rgba(196,114,122,0.15);
+    --fg: #f0e6da;
+    --fg-muted: #a89888;
+    --fg-dim: #706050;
+    --border: #3a3028;
+    --user-bubble: #3d2e22;
+    --bot-bubble: #262018;
+    --success: #7ab87a;
+    --warning: #d4b86a;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* Ambient background */
+  .ambient {
+    position: fixed; inset:0; pointer-events:none; z-index:0;
+    overflow:hidden;
+  }
+  .ambient .orb {
+    position:absolute; border-radius:50%; filter:blur(120px); opacity:0.3;
+    animation: orbFloat 20s ease-in-out infinite alternate;
+  }
+  .ambient .orb:nth-child(1) { width:500px; height:500px; background: var(--accent); top:-10%; left:-10%; }
+  .ambient .orb:nth-child(2) { width:400px; height:400px; background: var(--rose); bottom:-10%; right:-10%; animation-delay:-7s; animation-duration:25s; }
+  .ambient .orb:nth-child(3) { width:300px; height:300px; background: #6a5ad4; top:50%; left:50%; animation-delay:-14s; opacity:0.15; }
+
+  @keyframes orbFloat {
+    0% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(40px,-30px) scale(1.1); }
+    100% { transform: translate(-20px,20px) scale(0.95); }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 320px; min-width:320px;
+    background: var(--bg-warm);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    z-index:2; position:relative;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items:center; gap:12px;
+  }
+
+  .logo-icon {
+    width:42px; height:42px; border-radius:12px;
+    background: linear-gradient(135deg, var(--accent), var(--rose));
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:#fff; flex-shrink:0;
+  }
+
+  .logo-text h1 {
+    font-family:'Playfair Display',serif; font-size:22px; font-weight:700;
+    background: linear-gradient(135deg, var(--accent), var(--rose));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    line-height:1.1;
+  }
+  .logo-text span { font-size:11px; color:var(--fg-muted); letter-spacing:1px; text-transform:uppercase; }
+
+  /* Profile card */
+  .profile-card {
+    padding:20px; border-bottom:1px solid var(--border);
+  }
+  .profile-info {
+    display:flex; align-items:center; gap:14px; margin-bottom:14px;
+  }
+  .avatar-wrap {
+    position:relative; flex-shrink:0; cursor:pointer;
+  }
+  .avatar {
+    width:52px; height:52px; border-radius:50%;
+    background: linear-gradient(135deg, var(--accent), var(--rose));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Playfair Display',serif; font-size:22px; font-weight:700; color:#fff;
+    transition: transform 0.2s;
+  }
+  .avatar-wrap:hover .avatar { transform:scale(1.05); }
+  .avatar-badge {
+    position:absolute; bottom:-2px; right:-2px;
+    width:18px; height:18px; border-radius:50%;
+    background:var(--success); border:3px solid var(--bg-warm);
+  }
+  .profile-name { font-weight:600; font-size:15px; line-height:1.2; }
+  .profile-bio { font-size:12px; color:var(--fg-muted); margin-top:2px; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .profile-tags {
+    display:flex; flex-wrap:wrap; gap:6px;
+  }
+  .profile-tag {
+    padding:4px 10px; border-radius:20px; font-size:11px; font-weight:500;
+    background: var(--rose-soft); color:var(--rose); border:1px solid rgba(196,114,122,0.2);
+    transition: all 0.2s;
+  }
+  .profile-tag.book-tag { background:var(--accent-glow); color:var(--accent); border-color:rgba(212,149,106,0.2); }
+  .profile-tag.fanfic-tag { background:rgba(106,140,212,0.15); color:#8caad4; border-color:rgba(106,140,212,0.2); }
+
+  .btn-edit-profile {
+    width:100%; padding:10px; border-radius:10px; border:1px dashed var(--border);
+    background:transparent; color:var(--fg-muted); font-size:13px; font-weight:500;
+    cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px;
+    margin-top:12px; font-family:inherit;
+  }
+  .btn-edit-profile:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+
+  /* Topics */
+  .topics-section {
+    padding:16px 20px; flex:1; overflow-y:auto;
+  }
+  .topics-section h3 {
+    font-size:11px; text-transform:uppercase; letter-spacing:1.5px;
+    color:var(--fg-dim); margin-bottom:12px; font-weight:600;
+  }
+  .topic-btn {
+    width:100%; padding:12px 14px; border-radius:10px; border:none;
+    background:transparent; color:var(--fg); font-size:13px; font-weight:500;
+    cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:10px;
+    text-align:left; margin-bottom:4px; font-family:inherit;
+  }
+  .topic-btn:hover { background:var(--card); }
+  .topic-btn.active { background:var(--card-hover); border-left:3px solid var(--accent); }
+  .topic-btn i { width:20px; text-align:center; color:var(--fg-muted); font-size:14px; }
+  .topic-btn.active i { color:var(--accent); }
+  .topic-btn .topic-desc { display:block; font-size:11px; color:var(--fg-dim); font-weight:400; margin-top:2px; }
+
+  /* Sidebar footer */
+  .sidebar-footer {
+    padding:16px 20px; border-top:1px solid var(--border);
+    display:flex; gap:8px;
+  }
+  .sidebar-footer button {
+    flex:1; padding:8px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--fg-muted); font-size:12px; cursor:pointer;
+    transition:all 0.2s; font-family:inherit;
+  }
+  .sidebar-footer button:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* Chat area */
+  .chat-area {
+    flex:1; display:flex; flex-direction:column; position:relative; z-index:1;
+  }
+
+  .chat-header {
+    padding:16px 24px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+    background: rgba(26,20,16,0.8); backdrop-filter:blur(20px);
+  }
+  .chat-header-left { display:flex; align-items:center; gap:10px; }
+  .chat-header-left .status-dot {
+    width:8px; height:8px; border-radius:50%; background:var(--success);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  .chat-header-left span { font-size:13px; color:var(--fg-muted); }
+  .chat-header-actions { display:flex; gap:8px; }
+  .chat-header-actions button {
+    width:36px; height:36px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--fg-muted); cursor:pointer; transition:all 0.2s;
+    font-size:14px;
+  }
+  .chat-header-actions button:hover { border-color:var(--accent); color:var(--accent); }
+
+  .mobile-menu-btn {
+    display:none; width:36px; height:36px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--fg-muted); cursor:pointer; font-size:16px;
+  }
+
+  /* Messages */
+  .messages-container {
+    flex:1; overflow-y:auto; padding:24px; scroll-behavior:smooth;
+  }
+  .messages-container::-webkit-scrollbar { width:6px; }
+  .messages-container::-webkit-scrollbar-track { background:transparent; }
+  .messages-container::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+  .message {
+    display:flex; gap:12px; margin-bottom:20px;
+    animation: msgIn 0.4s ease-out;
+    max-width:85%;
+  }
+  @keyframes msgIn {
+    from { opacity:0; transform:translateY(12px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  .message.user { margin-left:auto; flex-direction:row-reverse; }
+
+  .msg-avatar {
+    width:34px; height:34px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+  }
+  .message.bot .msg-avatar {
+    background:linear-gradient(135deg,var(--accent),var(--rose)); color:#fff;
+  }
+  .message.user .msg-avatar {
+    background:var(--user-bubble); color:var(--accent);
+  }
+
+  .msg-content { flex:1; }
+  .msg-bubble {
+    padding:14px 18px; border-radius:16px; font-size:14px; line-height:1.7;
+    position:relative;
+  }
+  .message.bot .msg-bubble {
+    background:var(--bot-bubble); border:1px solid var(--border);
+    border-top-left-radius:4px;
+  }
+  .message.user .msg-bubble {
+    background:var(--user-bubble); border:1px solid rgba(212,149,106,0.15);
+    border-top-right-radius:4px;
+  }
+  .msg-bubble strong { color:var(--accent); font-weight:600; }
+  .msg-bubble em { color:var(--rose); font-style:italic; }
+  .msg-bubble .book-title { color:var(--accent); font-weight:600; font-style:italic; }
+  .msg-bubble .genre-tag {
+    display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px;
+    background:var(--rose-soft); color:var(--rose); margin:2px 2px;
+  }
+  .msg-bubble .rating {
+    color:var(--warning); font-size:13px;
+  }
+  .msg-bubble ul { padding-left:18px; margin:8px 0; }
+  .msg-bubble li { margin-bottom:4px; }
+  .msg-bubble .rec-card {
+    background:rgba(255,255,255,0.03); border:1px solid var(--border);
+    border-radius:10px; padding:12px; margin:8px 0;
+  }
+  .msg-bubble .rec-card .rec-title { font-weight:600; color:var(--accent); margin-bottom:4px; }
+  .msg-bubble .rec-card .rec-author { font-size:12px; color:var(--fg-muted); }
+  .msg-bubble .rec-card .rec-desc { font-size:12px; color:var(--fg-dim); margin-top:6px; line-height:1.5; }
+
+  .msg-time {
+    font-size:11px; color:var(--fg-dim); margin-top:6px;
+    padding:0 4px;
+  }
+  .message.user .msg-time { text-align:right; }
+
+  /* Typing indicator */
+  .typing-indicator {
+    display:none; gap:12px; margin-bottom:20px; max-width:85%;
+    animation: msgIn 0.3s ease-out;
+  }
+  .typing-indicator.show { display:flex; }
+  .typing-dots {
+    padding:14px 18px; border-radius:16px; border-top-left-radius:4px;
+    background:var(--bot-bubble); border:1px solid var(--border);
+    display:flex; gap:5px; align-items:center;
+  }
+  .typing-dots span {
+    width:7px; height:7px; border-radius:50%; background:var(--fg-dim);
+    animation: typeDot 1.4s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+  @keyframes typeDot {
+    0%,60%,100%{ transform:translateY(0); opacity:0.4; }
+    30%{ transform:translateY(-6px); opacity:1; }
+  }
+
+  /* Quick replies */
+  .quick-replies {
+    display:flex; flex-wrap:wrap; gap:8px; padding:0 24px 12px;
+  }
+  .quick-reply {
+    padding:8px 16px; border-radius:20px; border:1px solid var(--border);
+    background:transparent; color:var(--fg-muted); font-size:12px; font-weight:500;
+    cursor:pointer; transition:all 0.2s; font-family:inherit; white-space:nowrap;
+  }
+  .quick-reply:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-glow); }
+
+  /* Input */
+  .input-area {
+    padding:16px 24px 20px; border-top:1px solid var(--border);
+    background: rgba(26,20,16,0.9); backdrop-filter:blur(20px);
+  }
+  .input-wrap {
+    display:flex; align-items:flex-end; gap:10px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:8px 8px 8px 18px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within { border-color:var(--accent); }
+  .input-wrap textarea {
+    flex:1; background:none; border:none; outline:none; color:var(--fg);
+    font-size:14px; font-family:inherit; resize:none; max-height:120px;
+    line-height:1.5; padding:6px 0;
+  }
+  .input-wrap textarea::placeholder { color:var(--fg-dim); }
+  .send-btn {
+    width:40px; height:40px; border-radius:10px; border:none;
+    background:linear-gradient(135deg,var(--accent),var(--rose));
+    color:#fff; cursor:pointer; transition:all 0.2s; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .send-btn:hover { transform:scale(1.05); box-shadow:0 4px 20px var(--accent-glow); }
+  .send-btn:disabled { opacity:0.4; cursor:default; transform:none; box-shadow:none; }
+
+  .input-hint {
+    font-size:11px; color:var(--fg-dim); margin-top:8px; text-align:center;
+  }
+
+  /* Modal overlay */
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100;
+    display:none; align-items:center; justify-content:center;
+    backdrop-filter:blur(8px);
+  }
+  .modal-overlay.show { display:flex; }
+
+  .modal {
+    background:var(--card); border:1px solid var(--border); border-radius:20px;
+    width:90%; max-width:460px; max-height:90vh; overflow-y:auto;
+    animation: modalIn 0.3s ease-out;
+  }
+  @keyframes modalIn {
+    from { opacity:0; transform:scale(0.95) translateY(10px); }
+    to { opacity:1; transform:scale(1) translateY(0); }
+  }
+  .modal-header {
+    padding:24px 24px 0; display:flex; align-items:center; justify-content:space-between;
+  }
+  .modal-header h2 { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; }
+  .modal-close {
+    width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--fg-muted); cursor:pointer; font-size:14px;
+    transition:all 0.2s;
+  }
+  .modal-close:hover { border-color:var(--rose); color:var(--rose); }
+
+  .modal-body { padding:20px 24px 24px; }
+
+  .form-group { margin-bottom:16px; }
+  .form-group label {
+    display:block; font-size:12px; font-weight:600; color:var(--fg-muted);
+    margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;
+  }
+  .form-group input, .form-group textarea, .form-group select {
+    width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--bg-warm); color:var(--fg); font-size:14px; font-family:inherit;
+    outline:none; transition:border-color 0.2s;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    border-color:var(--accent);
+  }
+  .form-group textarea { resize:vertical; min-height:60px; }
+  .form-group select option { background:var(--bg-warm); }
+
+  .form-group .checkbox-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  }
+  .checkbox-item {
+    display:flex; align-items:center; gap:8px; padding:8px 12px;
+    border-radius:8px; border:1px solid var(--border); cursor:pointer;
+    transition:all 0.2s; font-size:13px;
+  }
+  .checkbox-item:hover { border-color:var(--fg-dim); }
+  .checkbox-item.selected { border-color:var(--accent); background:var(--accent-glow); color:var(--accent); }
+  .checkbox-item i { font-size:12px; }
+
+  .btn-save {
+    width:100%; padding:12px; border-radius:12px; border:none;
+    background:linear-gradient(135deg,var(--accent),var(--rose));
+    color:#fff; font-size:14px; font-weight:600; cursor:pointer;
+    font-family:inherit; transition:all 0.2s;
+  }
+  .btn-save:hover { box-shadow:0 4px 24px var(--accent-glow); transform:translateY(-1px); }
+
+  /* Toast */
+  .toast-container {
+    position:fixed; top:20px; right:20px; z-index:200;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .toast {
+    padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500;
+    background:var(--card); border:1px solid var(--border); color:var(--fg);
+    animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.5s forwards;
+    display:flex; align-items:center; gap:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.success { border-color:var(--success); }
+  .toast.success i { color:var(--success); }
+  @keyframes toastIn { from{opacity:0;transform:translateX(40px);} to{opacity:1;transform:translateX(0);} }
+  @keyframes toastOut { from{opacity:1;} to{opacity:0;transform:translateY(-10px);} }
+
+  /* Responsive */
+  @media(max-width:768px) {
+    .sidebar {
+      position:fixed; left:0; top:0; bottom:0; z-index:50;
+      transform:translateX(-100%);
+    }
+    .sidebar.open { transform:translateX(0); }
+    .mobile-menu-btn { display:flex; align-items:center; justify-content:center; }
+    .mobile-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:40;
+      display:none;
+    }
+    .mobile-overlay.show { display:block; }
+    .message { max-width:95%; }
+  }
+
+  /* Scrollbar for sidebar */
+  .topics-section::-webkit-scrollbar { width:4px; }
+  .topics-section::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="orb"></div>
+  <div class="orb"></div>
+  <div class="orb"></div>
+</div>
+
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+    <div class="logo-text">
+      <h1>Bookish</h1>
+      <span>Reading Companion</span>
+    </div>
+  </div>
+
+  <div class="profile-card">
+    <div class="profile-info">
+      <div class="avatar-wrap" onclick="openProfileModal()">
+        <div class="avatar" id="avatarInitial">R</div>
+        <div class="avatar-badge"></div>
+      </div>
+      <div>
+        <div class="profile-name" id="profileName">Reader</div>
+        <div class="profile-bio" id="profileBio">Love stories and happy endings</div>
+      </div>
+    </div>
+    <div class="profile-tags" id="profileTags">
+      <span class="profile-tag book-tag">Romance</span>
+      <span class="profile-tag fanfic-tag">Fanfiction</span>
+    </div>
+    <button class="btn-edit-profile" onclick="openProfileModal()">
+      <i class="fas fa-pen"></i> Update Profile
+    </button>
+  </div>
+
+  <div class="topics-section">
+    <h3>Quick Topics</h3>
+    <button class="topic-btn active" onclick="setTopic(this,'recommend')">
+      <i class="fas fa-wand-magic-sparkles"></i>
+      <div>Recommendations<span class="topic-desc">Get personalized book picks</span></div>
+    </button>
+    <button class="topic-btn" onclick="setTopic(this,'romance')">
+      <i class="fas fa-heart"></i>
+      <div>Romance Subgenres<span class="topic-desc">Explore types of romance</span></div>
+    </button>
+    <button class="topic-btn" onclick="setTopic(this,'fanfic')">
+      <i class="fas fa-feather-pointed"></i>
+      <div>Fanfiction World<span class="topic-desc">Tropes, fandoms, recs</span></div>
+    </button>
+    <button class="topic-btn" onclick="setTopic(this,'tropes')">
+      <i class="fas fa-masks-theater"></i>
+      <div>Trope Talk<span class="topic-desc">Enemies to lovers & more</span></div>
+    </button>
+    <button class="topic-btn" onclick="setTopic(this,'discuss')">
+      <i class="fas fa-comments"></i>
+      <div>Book Discussion<span class="topic-desc">Deep dive into stories</span></div>
+    </button>
+    <button class="topic-btn" onclick="setTopic(this,'new')">
+      <i class="fas fa-fire"></i>
+      <div>Trending Now<span class="topic-desc">What's hot in reading</span></div>
+    </button>
+  </div>
+
+  <div class="sidebar-footer">
+    <button onclick="clearChat()"><i class="fas fa-broom"></i> Clear</button>
+    <button onclick="exportChat()"><i class="fas fa-download"></i> Export</button>
+  </div>
+</aside>
+
+<!-- Chat -->
+<main class="chat-area">
+  <div class="chat-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="chat-header-left">
+        <div class="status-dot"></div>
+        <span id="headerStatus">Ready to chat about books</span>
+      </div>
+    </div>
+    <div class="chat-header-actions">
+      <button onclick="openProfileModal()" title="Edit Profile"><i class="fas fa-user-pen"></i></button>
+      <button onclick="clearChat()" title="Clear Chat"><i class="fas fa-trash-can"></i></button>
+    </div>
+  </div>
+
+  <div class="messages-container" id="messagesContainer">
+    <!-- Messages injected here -->
+  </div>
+
+  <div class="typing-indicator" id="typingIndicator">
+    <div class="msg-avatar" style="background:linear-gradient(135deg,var(--accent),var(--rose));color:#fff;font-size:14px;">
+      <i class="fas fa-book-open"></i>
+    </div>
+    <div class="typing-dots">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <div class="quick-replies" id="quickReplies"></div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="userInput" rows="1" placeholder="Ask about books, fanfics, romance..." 
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="input-hint">Press Enter to send, Shift+Enter for new line</div>
+  </div>
+</main>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Edit Profile</h2>
+      <button class="modal-close" onclick="closeProfileModal()"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" id="editName" placeholder="What should I call you?" maxlength="30">
+      </div>
+      <div class="form-group">
+        <label>Bio / Reading Vibe</label>
+        <textarea id="editBio" placeholder="e.g., 'Here for slow-burn angst'" maxlength="80"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Favorite Genres (pick up to 4)</label>
+        <div class="checkbox-grid" id="genreGrid"></div>
+      </div>
+      <div class="form-group">
+        <label>Reading Mood</label>
+        <select id="editMood">
+          <option value="fluffy">Fluffy & Light</option>
+          <option value="angsty">Angsty & Emotional</option>
+          <option value="spicy">Spicy & Bold</option>
+          <option value="cozy">Cozy & Comforting</option>
+          <option value="thrilling">Thrilling & Dark</option>
+          <option value="whatever">Whatever hits different</option>
+        </select>
+      </div>
+      <button class="btn-save" onclick="saveProfile()">Save Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ========== PROFILE STATE ==========
+const GENRES = [
+  { id:'romance', label:'Romance', icon:'fa-heart', type:'book' },
+  { id:'fantasy', label:'Fantasy', icon:'fa-dragon', type:'book' },
+  { id:'contemporary', label:'Contemporary', icon:'fa-city', type:'book' },
+  { id:'mystery', label:'Mystery', icon:'fa-magnifying-glass', type:'book' },
+  { id:'scifi', label:'Sci-Fi', icon:'fa-rocket', type:'book' },
+  { id:'historical', label:'Historical', icon:'fa-landmark', type:'book' },
+  { id:'fanfic', label:'Fanfiction', icon:'fa-feather-pointed', type:'fanfic' },
+  { id:'thriller', label:'Thriller', icon:'fa-skull', type:'book' },
+  { id:'horror', label:'Horror', icon:'fa-ghost', type:'book' },
+  { id:'literary', label:'Literary Fic', icon:'fa-pen-nib', type:'book' },
+];
+
+let profile = {
+  name: 'Reader',
+  bio: 'Love stories and happy endings',
+  genres: ['romance', 'fanfic'],
+  mood: 'whatever'
+};
+
+let currentTopic = 'recommend';
+let chatHistory = [];
+let isTyping = false;
+
+// ========== BOOK KNOWLEDGE BASE ==========
+const knowledge = {
+  romance: {
+    subgenres: [
+      { name:'Contemporary Romance', desc:'Modern-day love stories with relatable characters. Think Sally Rooney meets Emily Henry.', examples:['Beach Read by Emily Henry','People We Meet on Vacation by Emily Henry','Normal People by Sally Rooney','The Flatshare by Beth O\'Leary'] },
+      { name:'Historical Romance', desc:'Period love stories full of societal constraints, scandalous affairs, and sweeping passion.', examples:['Red, White & Royal Blue (alt-history)','Bridgerton series by Julia Quinn','The Duke and I','Outlander by Diana Gabaldon'] },
+      { name:'Dark Romance', desc:'Morally grey love interests, power dynamics, and stories that push boundaries. Not for the faint-hearted.', examples:['Haunting Adeline by H.D. Carlton','Credence by Penelope Douglas','Twisted Love by Ana Huang','Salt & Seduction'] },
+      { name:'Fantasy Romance', desc:'Magic systems AND makeout scenes. The best of both worlds with epic world-building.', examples:['Fourth Wing by Rebecca Yarros','ACOTAR by Sarah J. Maas','From Blood and Ash by Jennifer L. Armentrout','The Serpent and the Wings of Night'] },
+      { name:'Romantasy', desc:'The massive genre-bender taking over BookTok. High fantasy stakes with central romance arcs.', examples:['Throne of Glass series','Crescent City by Sarah J. Maas','Zodiac Academy by Caroline Peckham','The Bridge Kingdom by Danielle L. Jensen'] },
+      { name:'Sports Romance', desc:'Athletes, rivals, and the tension that comes with competition. Very popular on BookTok.', examples:['Icebreaker by Hannah Grace','The Deal by Elle Kennedy','Fake Dates and Mooncakes','Wildfire by Ilona Andrews'] },
+      { name:'Enemies to Lovers', desc:'The god-tier trope. Start with hatred, end with devotion. The slow burn that burns the brightest.', examples:['The Hating Game by Sally Thorne','Love, Theoretically by Ali Hazelwood','Bond & the Boy Who Cried Wolf'] },
+      { name:'Slow Burn', desc:'Patience is a virtue and also a reading requirement. The build-up makes the payoff legendary.', examples:['The Song of Achilles','The Longest Ride','Beach Read','Unspoken Bonds'] },
+    ],
+    tropes: [
+      { name:'Enemies to Lovers', desc:'They hate each other... until they don\'t. The banter is unmatched, the tension is unbearable, and the moment they finally kiss? Chef\'s kiss.', why:'Because the emotional journey from hatred to love feels earned and explosive.', variations:['Rivals to lovers','Grumpy x sunshine (adjacent)','Nemesis to lovers'] },
+      { name:'Friends to Lovers', desc:'The "what if it\'s always been you" realization. Comfortable, warm, and devastating when one person has been silently pining.', why:'It resonates because we\'ve all wondered about a close friend.', variations:['Best friend\'s sibling','Roommates to lovers','Childhood friends'] },
+      { name:'Fake Dating', desc:'Pretend to be together for reasons, catch real feelings by chapter 5. The absolute classic.', why:'Forced proximity plus the irony of pretending creates perfect tension.', variations:['Fake marriage','Fake engagement','PR relationship'] },
+      { name:'Grumpy x Sunshine', desc:'One is a literal storm cloud, the other is human sunshine. They balance each other perfectly.', why:'The contrast is addictive. Watching the grumpy one soften is pure serotonin.', variations:['Stoic x bubbly','Rude x sweet','Cold x warm'] },
+      { name:'Forced Proximity', desc:'Stuck together by circumstances. One bed, snowed in, shared apartment — doesn\'t matter how, just that they CAN\'T escape each other.', why:'Removes all escape routes. Feelings HAVE to surface.', variations:['Only one bed','Stuck in elevator','Road trip','Sharing an apartment'] },
+      { name:'Star-Crossed Lovers', desc:'Fate, family, or society says no. They say "watch me." The tragedy potential makes it extra intense.', why:'The forbidden element adds urgency and weight to every interaction.', variations:['Different worlds','Family feud','Class divide','Supernatural barrier'] },
+      { name:'Touch Her and You Die', desc:'The love interest goes absolutely feral when someone threatens their person. Possessive but romantic.', why:'It\'s the ultimate "chosen" feeling — being someone\'s priority.', variations:['Protective instinct','Berserk button','Soft for you, lethal for everyone else'] },
+      { name:'Found Family', desc:'Not blood, but bond. A group of misfits who become each other\'s home. Often paired with romance.', why:'Deeply emotional. Everyone deserves to be chosen.', variations:['Ragtag crew','Adopted siblings','Team dynamics'] },
+    ],
+    books: [
+      { title:'The Song of Achilles', author:'Madeline Miller', genre:'Historical Mythological Romance', rating:'4.8', desc:'A devastating retelling of the Iliad through Patroclus\'s eyes. The slowest burn in existence that will leave you hollowed out in the best way.', mood:['angsty','cozy'] },
+      { title:'Red, White & Royal Blue', author:'Casey McQuiston', genre:'Contemporary Romance', rating:'4.5', desc:'The First Son of the US and the Prince of Wales fall in love. Enemies to lovers, fake dating vibes, and deeply tender moments.', mood:['fluffy','angsty'] },
+      { title:'Fourth Wing', author:'Rebecca Yarros', genre:'Fantasy Romance / Romantasy', rating:'4.3', desc:'Violet gets forced into the deadly dragon rider school. Xaden is the terrifying wing leader. The tension is OFF the charts.', mood:['thrilling','spicy'] },
+      { title:'Beach Read', author:'Emily Henry', genre:'Contemporary Romance', rating:'4.4', desc:'Two writers swap genres for the summer. She writes romance, he writes literary fiction. They challenge each other and fall hard.', mood:['fluffy','cozy'] },
+      { title:'The Hating Game', author:'Sally Thorne', genre:'Contemporary / Enemies to Lovers', rating:'4.2', desc:'Lucy and Joshua are executive assistants who despise each other while competing for one promotion. The elevator scene alone is worth it.', mood:['fluffy','spicy'] },
+      { title:'It Ends With Us', author:'Colleen Hoover', genre:'Contemporary Romance / Women\'s Fiction', rating:'4.6', desc:'A love story that\'s also about breaking cycles. Beautiful and brutal. Read with tissues and emotional support nearby.', mood:['angsty','thrilling'] },
+      { title:'Bond & the Boy Who Cried Wolf', author:'C.S. Pacat (series)', genre:'Fantasy Romance', rating:'4.5', desc:'A captured prince forced to serve his enemy. Enemies to lovers perfected. The slow burn will actually kill you.', mood:['angsty','spicy'] },
+      { title:'Icebreaker', author:'Hannah Grace', genre:'Sports Romance / Contemporary', rating:'4.3', desc:'Stella and Nate: the figure skater and the hockey captain who hate each other but have to share a rink. BookTok\'s favorite.', mood:['fluffy','spicy'] },
+      { title:'Atomic Habits', author:'James Clear', genre:'Self-Help (non-romance break)', rating:'4.7', desc:'Okay hear me out — sometimes you need a palate cleanser from all the angst. This actually changed my life. No love interest but I still cried.', mood:['cozy'] },
+      { title:'The Love Hypothesis', author:'Ali Hazelwood', genre:'Contemporary / Fake Dating', rating:'4.3', desc:'A biology grad student fake-dates a grumpy professor. STEM romance at its finest. Adam Carlsen is the blueprint for grumpy love interests.', mood:['fluffy','spicy'] },
+      { title:'From Blood and Ash', author:'Jennifer L. Armentrout', genre:'Fantasy Romance', rating:'4.2', desc:'Poppy has been kept isolated her whole life. Hawke is a guard who makes her question everything. Maiden and the guard trope done RIGHT.', mood:['thrilling','spicy'] },
+      { title:'People We Meet on Vacation', author:'Emily Henry', genre:'Contemporary Romance', rating:'4.5', desc:'Two best friends take annual trips together for a decade. One trip ruins everything. Can they fix it? Yes, and it\'s beautiful.', mood:['angsty','fluffy'] },
+    ]
+  },
+  fanfic: {
+    platforms: [
+      { name:'Archive of Our Own (AO3)', desc:'The holy land. Best tagging system, no ads, incredible search. If you\'re not on AO3, are you even reading fanfic?', features:['Mature content allowed','Kudos and comments','Bookmarking','Tag wrangling','Collections','Challenges'] },
+      { name:'Wattpad', desc:'More casual, mobile-first. Great for original fiction too. Younger demographic. Hit-or-miss quality but some genuine gems.', features:['Inline comments','Reading lists','Paid stories program','Contests'] },
+      { name:'FanFiction.net', desc:'The OG. Looks like it hasn\'t been updated since 2005 but still has millions of stories. Nostalgic.', features:['Massive archive','Simple interface','PM system','C2 communities'] },
+      { name:'Tumblr', desc:'Not a fanfic platform per se, but SO much fic culture lives here. Drabbles, headcanons, askbox fics.', features:['Micro-fic culture','Ask prompts','Reblog chain stories','Art + fic combos'] },
+    ],
+    tropes: [
+      { name:'Soulmates AU', desc:'The universe literally says "you two belong together." Red string of fate, soulmark words, colored vision — infinite variations.', variations:['First words on skin','Timer counting down','Shared dreams','Color appears when you meet','Damage appears on soulmate'] },
+      { name:'Coffee Shop AU', desc:'They always meet at a coffee shop. Barista x regular is the bread and butter of fanfic. Comforting, low-stakes, maximum cozy.', variations:['Bakery AU','Bookstore AU','Flower shop AU','Library AU'] },
+      { name:'Hanahaki Disease', desc:'Unrequited love literally makes flowers grow in your lungs. Tragic, beautiful, and uniquely fanfic. Can be cured by surgery (losing feelings) or reciprocation.', origin:'Japanese fandom culture', warning:'Often ends in character death' },
+      { name:'Time Travel Fix-It', desc:'A character goes back in time to prevent canon events from happening. "I can save them this time" energy. Extremely emotional.', variations:['Loop fic','Memory reset','Reincarnation fix-it','Peggy Sue'] },
+      { name:'Fake Dating in Fic', desc:'Same as published romance but with established characters you already love. "We have to pretend to date for the mission" but it\'s Draco and Harry.', why:'Works so well because you already have the character dynamics.' },
+      { name:'Omegaverse', desc:'A secondary gender system with Alphas, Betas, and Omegas. Controversial but enormously popular. Explores power dynamics, biology, and societal roles.', warning:'Can include non-con elements, always check tags' },
+      { name:'Bed Sharing', desc:'"There\'s only one bed" — the trope that launched a thousand fics. Forced proximity at its purest. Someone always ends up on the floor or... not.', variants:['Sharing a blanket','Cuddling for warmth','Accidental sleep position'] },
+      { name:'Pining', desc:'One character silently, desperately yearning for the other. The "I love you but I\'ll never say it" energy. Often combined with slow burn for maximum devastation.', subtypes:['Mutual pining (both idiots in love)','Unrequited pining','Pining from afar','Post-confession pining'] },
+    ],
+    fandoms: [
+      { name:'Harry Potter', desc:'The fandom that raised a generation. Drarry is the ship that launched a thousand meta essays. Still going strong after 20+ years.', topShips:['Drarry (Draco/Harry)','Jegulus (James/Regulus)','Wolfstar (Sirius/Remus)','Hinny','Romione'], wordCount:'Over 800K fics on AO3 alone' },
+      { name:'Marvel / MCU', desc:'Stucky, Stony, Thorki — take your pick. The MCU gave us too many attractive people in tight suits and fandom delivered.', topShips:['Stucky (Steve/Bucky)','Stony (Steve/Tony)','Thorki','WinterIron','Clintasha'], wordCount:'600K+ fics' },
+      { name:'Stranger Things', desc:'Byler took over the internet. The slow-burn canon-adjacent ship that has the entire fandom holding its breath.', topShips:['Byler (Will/Mike)','Steddie (Steve/Eddie)','Ronance (Robin/Nancy)','Jancy'], wordCount:'100K+ and growing' },
+      { name:'The Last of Us', desc:'Ellie and Dina gave us everything. The game fandom was massive; the show made it mainstream.', topShips:['Ellie/Dina','Joel/Tess','Gellie (Gia/Ellie)'], wordCount:'40K+ fics' },
+      { name:'K-Pop (BTS, Stray Kids, etc.)', desc:'The RPF (Real Person Fiction) juggernaut. Enormous output, incredible writers, dedicated communities.', topShips:['Taekook (BTS)','Minsung (Stray Kids)','Woosan (ATEEZ)','Sunki (Enhypen)'], wordCount:'Millions across platforms' },
+      { name:'Anime (JJK, MHA, Demon Slayer)', desc:'Japanese fandom meets Western fanfic culture. The tropes are unhinged in the best way.', topShips:['SatoSugu (JJK)','TodoDeku (MHA)','TanKana (Demon Slayer)','LawaSan (One Piece)'], wordCount:'500K+ across AO3' },
+    ],
+    tips: [
+      'Always check the tags before reading. AO3 tags are your safety net.',
+      'Sort by kudos if you want the community\'s top picks, but don\'t sleep on hidden gems with few hits.',
+      'If a fic has 100K+ words and updates weekly, you\'re in for a journey.',
+      'Read the author\'s notes — they often contain warnings, spoilers, or inside jokes.',
+      'Leave comments! Fanfic writers survive on feedback and it genuinely means the world to them.',
+      'Use the "exclude" tag filter liberally. Your reading experience will improve 1000%.',
+      'Bookmark fics you love so you can find them again. Future you will thank present you.',
+      'Don\'t like, don\'t read (DLDR) is the golden rule. Respect people\'s tags and boundaries.',
+    ]
+  }
+};
+
+// ========== CONVERSATION RESPONSES ==========
+function getResponse(input) {
+  const lower = input.toLowerCase().trim();
+  const userName = profile.name;
+  const mood = profile.mood;
+
+  // Greeting patterns
+  if (/^(hi|hey|hello|howdy|sup|yo|heya|hii+|good morning|good evening|good afternoon)/i.test(lower)) {
+    const greetings = [
+      `Hey ${userName}! <em>sets down current book</em> Perfect timing, I was just thinking about what to recommend next. What's on your mind?`,
+      `${userName}! Hi hi hi! Okay so I have opinions about literally everything book-related right now. What do you want to dive into?`,
+      `Oh hey ${userName}! Welcome back. I was just organizing my mental TBR list — it's terrifyingly long. How can I help?`,
+      `Hey there, ${userName}! You know that feeling when you finish a book and just stare at the ceiling for 30 minutes? Yeah, that's me right now. Talk to me about books to cope.`,
+    ];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  }
+
+  // How are you
+  if (/how are you|how('s| is) it going|what('s| is) up|how do you feel/i.test(lower)) {
+    return `Honestly? I'm emotionally compromised from a fanfic I read at 3 AM. No spoilers but... the character development got me. But I'm functioning! Mostly. How about you, ${userName}? Read anything good lately?`;
+  }
+
+  // Profile-related
+  if (/who am i|my profile|what do you know about me|my name/i.test(lower)) {
+    const genreNames = profile.genres.map(g => {
+      const found = GENRES.find(x => x.id === g);
+      return found ? found.label : g;
+    }).join(', ');
+    return `Okay so here's what I know about you, ${userName}:<br><br>
+      <strong>Name:</strong> ${profile.name}<br>
+      <strong>Vibe:</strong> ${profile.bio}<br>
+      <strong>Genres:</strong> ${genreNames}<br>
+      <strong>Current mood:</strong> ${mood}<br><br>
+      Want me to update anything? Just click <strong>Update Profile</strong> in the sidebar or I can adjust my recommendations based on what you tell me!`;
+  }
+
+  // Update/change profile
+  if (/change my |update my |edit my |set my |i want to change|can you change/i.test(lower)) {
+    return `Absolutely, ${userName}! You can update your profile in two ways:<br><br>
+      <strong>Quick way:</strong> Click the <strong>Update Profile</strong> button in the left sidebar<br>
+      <strong>Even quicker:</strong> Just tell me what to change! Like "call me Alex" or "I'm in a spicy mood right now" and I'll update it directly.<br><br>
+      What do you want to change?`;
+  }
+
+  // Name change
+  if (/call me (.+)|my name is (.+)|i('m| am) (.+)/i.test(lower) && lower.length < 50) {
+    const nameMatch = input.match(/(?:call me|i'm|i am|my name is)\s+(.+)/i);
+    if (nameMatch) {
+      const newName = nameMatch[1].trim().split(' ')[0];
+      profile.name = newName.charAt(0).toUpperCase() + newName.slice(1);
+      updateProfileUI();
+      saveProfileData();
+      return `Got it! I'll call you <strong>${profile.name}</strong> from now on. That's a great name for someone who reads as much as you do. What else is on your mind?`;
+    }
+  }
+
+  // Mood change
+  if (/i('m| am) (feeling|in the mood for|in a) (.+)/i.test(lower)) {
+    const moodMatch = lower.match(/(?:feeling|in the mood for|in a)\s+(.+)/);
+    if (moodMatch) {
+      const moodText = moodMatch[1];
+      if (moodText.includes('fluff') || moodText.includes('light') || moodText.includes('happy')) {
+        profile.mood = 'fluffy';
+      } else if (moodText.includes('angst') || moodText.includes('sad') || moodText.includes('cry')) {
+        profile.mood = 'angsty';
+      } else if (moodText.includes('spic') || moodText.includes('hot') || moodText.includes('bold')) {
+        profile.mood = 'spicy';
+      } else if (moodText.includes('coz') || moodText.includes('comfort') || moodText.includes('warm')) {
+        profile.mood = 'cozy';
+      } else if (moodText.includes('thrill') || moodText.includes('dark') || moodText.includes('intense')) {
+        profile.mood = 'thrilling';
+      } else {
+        profile.mood = 'whatever';
+      }
+      saveProfileData();
+      return `Noted, ${userName}! I've updated your mood to <strong>${profile.mood}</strong>. I'll tailor my recs accordingly — sometimes you just NEED a specific vibe, I get it. Want me to suggest something that fits?`;
+    }
+  }
+
+  // Romance subgenres
+  if (/romance subgenre|types of romance|romance genre|what romance|explain romance/i.test(lower)) {
+    let response = `Oh ${userName}, you've asked the right question. Romance is NOT just "people falling in love." It's an entire universe. Here's the breakdown:<br><br>`;
+    knowledge.romance.subgenres.forEach(sg => {
+      response += `<div class="rec-card"><div class="rec-title">${sg.name}</div><div class="rec-desc">${sg.desc}</div><div class="rec-author">Notable: ${sg.examples.slice(0,2).join(' · ')}</div></div>`;
+    });
+    response += `<br>Which one catches your eye? I can go WAY deeper on any of these.`;
+    return response;
+  }
+
+  // Specific subgenre
+  for (const sg of knowledge.romance.subgenres) {
+    if (lower.includes(sg.name.toLowerCase())) {
+      return `Oh you want to talk about <strong>${sg.name}</strong>? <em>cracks knuckles</em> Okay so:<br><br>
+        ${sg.desc}<br><br>
+        <strong>Must reads:</strong><ul>${sg.examples.map(e => `<li><span class="book-title">${e}</span></li>`).join('')}</ul><br>
+        This subgenre is ${sg.name.includes('Dark') ? 'definitely not for everyone — check content warnings before diving in.' : sg.name.includes('Fantasy') ? 'absolutely BOOMING right now, especially on BookTok. You can\'t escape it and honestly, why would you want to?' : 'a comfort genre for so many readers, and for good reason.'}<br><br>
+        Want me to recommend something specific based on your current mood?`;
+    }
+  }
+
+  // Tropes
+  if (/tropes?|trope talk|what('s| is) a trope|best trope|favorite trope/i.test(lower)) {
+    let response = `${userName}, tropes are the FLAVOR of romance. Here are the ones that make readers absolutely feral:<br><br>`;
+    knowledge.romance.tropes.forEach(t => {
+      response += `<div class="rec-card"><div class="rec-title">${t.name}</div><div class="rec-desc">${t.desc}</div><div class="rec-author">${t.why}</div></div>`;
+    });
+    response += `<br>Which trope is YOUR weakness? Because I have OPINIONS and recommendations for all of them.`;
+    return response;
+  }
+
+  // Specific trope
+  for (const trope of knowledge.romance.tropes) {
+    const tropeLower = trope.name.toLowerCase();
+    if (lower.includes(tropeLower) || lower.includes(tropeLower.replace(/\s/g,''))) {
+      return `<strong>${trope.name}</strong>?! <em>vibrates with excitement</em><br><br>
+        ${trope.desc}<br><br>
+        <strong>Why it works:</strong> ${trope.why}<br><br>
+        <strong>Variations I love:</strong> ${trope.variations.map(v => `<span class="genre-tag">${v}</span>`).join(' ')}<br><br>
+        This trope hits different every single time. Want me to drop some specific book recs that nail this trope perfectly?`;
+    }
+  }
+
+  // Enemies to lovers specific (very common)
+  if (/enemy.*lover|hate.*love|hate to love/i.test(lower)) {
+    return `<strong>Enemies to Lovers</strong> is the trope that runs the romance industry and I will NOT be taking questions.<br><br>
+      The formula is simple: intense hatred → begrudging respect → accidental softness → "wait why do I care so much" → DEVASTATING confession scene.<br><br>
+      <div class="rec-card"><div class="rec-title">The Hating Game by Sally Thorne</div><div class="rec-desc">The gold standard. Lucy and Joshua's banter is razor-sharp and the tension? Palpable.</div></div>
+      <div class="rec-card"><div class="rec-title">Bond & the Boy Who Cried Wolf (Captive Prince)</div><div class="rec-desc">Darker, slower, more devastating. Laurent and Damen will ruin your life in the best way.</div></div>
+      <div class="rec-card"><div class="rec-title">Red, White & Royal Blue</div><div class="rec-desc">Royal enemies to lovers with political stakes. Alex and Henry's emails alone could make you cry.</div></div><br>
+      ${userName}, have you read any of these? Or do you want recs more tailored to what you usually read?`;
+  }
+
+  // Fanfic general
+  if (/fanfic|fan fiction|fanfiction/i.test(lower) && !/platform|site|where/i.test(lower)) {
+    return `Ah, fanfic. The land of "I know the canon said this but what if..." energy. <em>settles in</em><br><br>
+      Here's the thing about fanfic that people don't get: some of the BEST writing on the internet is free and posted on AO3 by someone with a handle like "sad_vampire_69."<br><br>
+      <strong>What makes fanfic special:</strong><br>
+      <ul>
+        <li>You already care about the characters — no 50-page introduction needed</li>
+        <li>The tropes hit HARDER because you have canon context</li>
+        <li>Writers take RISKS that published authors can't</li>
+        <li>The community is incredible — kudos, comments, fanart</li>
+        <li>It's FREE. Actual literary art for zero dollars</li>
+      </ul><br>
+      Want to talk about <strong>fandoms</strong>, <strong>trope AUs</strong>, <strong>where to read</strong>, or <strong>specific recommendations</strong>? I'm here for all of it.`;
+  }
+
+  // Fanfic platforms
+  if (/where.*fanfic|platform|ao3|wattpad|fanfiction\.net|best site.*fanfic/i.test(lower)) {
+    let response = `Great question, ${userName}! Here's the fanfic platform breakdown:<br><br>`;
+    knowledge.fanfic.platforms.forEach(p => {
+      response += `<div class="rec-card"><div class="rec-title">${p.name}</div><div class="rec-desc">${p.desc}</div><div class="rec-author">${p.features.slice(0,3).map(f=>'✦ '+f).join(' · ')}</div></div>`;
+    });
+    response += `<br><strong>My honest take:</strong> AO3 is king. The tagging system alone makes it worth it. Wattpad for more casual browsing. FF.net if you're feeling nostalgic or looking for older fandom content.<br><br>What fandom are you looking to dive into?`;
+    return response;
+  }
+
+  // Fanfic tropes/AUs
+  if (/fanfic trope|fic trope|au trope|soulmate|coffee shop|hanahaki|omegaverse|bed shar/i.test(lower)) {
+    let response = `Fanfic tropes are a DIFFERENT beast from published romance tropes. They're weirder, more creative, and sometimes deeply unhinged (complimentary). Here are the big ones:<br><br>`;
+    knowledge.fanfic.tropes.forEach(t => {
+      response += `<div class="rec-card"><div class="rec-title">${t.name}</div><div class="rec-desc">${t.desc}</div>${t.variations ? '<div class="rec-author">Variations: '+t.variations.map(v=>'✦ '+v).join(' · ')+'</div>' : ''}${t.warning ? '<div class="rec-author" style="color:var(--rose)">⚠ '+t.warning+'</div>' : ''}</div>`;
+    });
+    response += `<br>Which AU makes you click immediately? Because same.`;
+    return response;
+  }
+
+  // Soulmates AU specific
+  if (/soulmate/i.test(lower)) {
+    const soulmates = knowledge.fanfic.tropes.find(t => t.name === 'Soulmates AU');
+    return `<strong>Soulmates AU</strong> is possibly the most creative trope in fanfic because the variations are INFINITE.<br><br>
+      ${soulmates.desc}<br><br>
+      <strong>Popular variants:</strong> ${soulmates.variations.map(v=>`<span class="genre-tag">${v}</span>`).join(' ')}<br><br>
+      The best soulmate fics are the ones that subvert the trope — like soulmates who reject the bond, or platonic soulmates, or the words appearing at the WORST possible time.<br><br>
+      Want me to recommend some specific soulmate fics from your favorite fandom?`;
+  }
+
+  // Hanahaki specific
+  if (/hanahaki/i.test(lower)) {
+    const hana = knowledge.fanfic.tropes.find(t => t.name === 'Hanahaki Disease');
+    return `Oh <strong>Hanahaki</strong>. The trope that makes you question why you voluntarily put yourself through emotional devastation.<br><br>
+      ${hana.desc}<br><br>
+      <strong>Origin:</strong> ${hana.origin}<br>
+      <span style="color:var(--rose)"><strong>⚠ ${hana.warning}</strong></span><br><br>
+      The most devastating hanahaki fics are the ones where the person CHOOSES not to get the surgery. "I'd rather die with these flowers than live without loving you" — and fandom just EATS it up. Including me. <em>cries</em><br><br>
+      It's beautifully tragic but definitely not for every reading mood. What are you in the mood for, ${userName}?`;
+  }
+
+  // Fandoms
+  if (/fandom|which fandom|popular fandom|fandom.*popular|what fandom/i.test(lower)) {
+    let response = `Okay ${userName}, here's the current state of fandoms — who's big, who's growing, and where the best fic is:<br><br>`;
+    knowledge.fanfic.fandoms.forEach(f => {
+      response += `<div class="rec-card"><div class="rec-title">${f.name}</div><div class="rec-desc">${f.desc}</div><div class="rec-author">Top ships: ${f.topShips.slice(0,3).join(' · ')}<br>Total: ${f.wordCount}</div></div>`;
+    });
+    response += `<br>Which fandom are you in? Or which one are you curious about? I can give you specific fic recs!`;
+    return response;
+  }
+
+  // Specific fandom queries
+  for (const fandom of knowledge.fanfic.fandoms) {
+    if (lower.includes(fandom.name.toLowerCase().split(' ')[0]) && lower.includes(fandom.name.toLowerCase().split(' ').pop())) {
+      return `<strong>${fandom.name}</strong> fandom! Yes let's GO.<br><br>
+        ${fandom.desc}<br><br>
+        <strong>The ships everyone's reading:</strong><br>
+        ${fandom.topShips.map(s => `<span class="genre-tag">${s}</span>`).join(' ')}<br><br>
+        <strong>Scale:</strong> ${fandom.wordCount}<br><br>
+        This fandom has some absolutely INCREDIBLE writers. Want me to point you toward the must-read fics?`;
+    }
+  }
+
+  // Recommend books
+  if (/recommend|suggest|what should i read|what to read|give me a book|book rec|read next|tbr/i.test(lower)) {
+    let filtered = knowledge.romance.books;
+    if (mood !== 'whatever') {
+      const moodFiltered = filtered.filter(b => b.mood.includes(mood));
+      if (moodFiltered.length > 0) filtered = moodFiltered;
+    }
+    // Pick 3 random
+    const shuffled = filtered.sort(() => 0.5 - Math.random());
+    const picks = shuffled.slice(0, 3);
+
+    let response = `Okay ${userName}, based on your mood (<strong>${mood}</strong>) and what you like, here are my top picks for you right now:<br><br>`;
+    picks.forEach(book => {
+      response += `<div class="rec-card">
+        <div class="rec-title">${book.title} <span class="rating">${'★'.repeat(Math.floor(parseFloat(book.rating)))}</span></div>
+        <div class="rec-author">by ${book.author} · ${book.genre}</div>
+        <div class="rec-desc">${book.desc}</div>
+      </div>`;
+    });
+    response += `<br>If none of these hit the spot, tell me what you're craving — I have opinions on literally everything. Grumpy x sunshine? Dark academia? Found family? Just say the word.`;
+    return response;
+  }
+
+  // Specific book queries
+  for (const book of knowledge.romance.books) {
+    if (lower.includes(book.title.toLowerCase().replace(/[^a-z\s]/g,'').split(' ').slice(0,3).join(' '))) {
+      return `<span class="book-title">${book.title}</span> by ${book.author}!<br><br>
+        <strong>Genre:</strong> <span class="genre-tag">${book.genre}</span>
+        <strong>Rating:</strong> <span class="rating">${'★'.repeat(Math.floor(parseFloat(book.rating)))} ${book.rating}/5</span><br><br>
+        ${book.desc}<br><br>
+        <strong>Reading mood:</strong> ${book.mood.map(m => `<span class="genre-tag">${m}</span>`).join(' ')}<br><br>
+        ${book.title.includes('Achilles') ? 'Fair warning: this book will break you into approximately 47 pieces and you will thank it for the privilege. Have a support system ready.' : book.title.includes('Fourth Wing') ? 'The banter in this book is LEGENDARY. Xaden Riorson has no right being that attractive on paper.' : 'Highly recommend reading this one when you have a free afternoon because you WILL not put it down.'}<br><br>
+        Want something similar, or want to talk about it?`;
+    }
+  }
+
+  // Fanfic tips
+  if (/fanfic tip|how to.*fanfic|fanfic advice|new to fanfic|start.*fanfic/i.test(lower)) {
+    let response = `${userName}, welcome to the wonderful world of fanfic! Here's what I wish someone told me when I started:<br><br>`;
+    knowledge.fanfic.tips.forEach((tip, i) => {
+      response += `<strong>${i+1}.</strong> ${tip}<br>`;
+    });
+    response += `<br>The biggest thing: <em>don't be ashamed of reading fanfic.</em> Some of it is genuinely better than published fiction. The fact that it's free and written by fans who LOVE the source material makes it special in a way traditional publishing can't replicate.<br><br>What fandom do you want to start with?`;
+    return response;
+  }
+
+  // Pining
+  if (/pining|yearning|longing/i.test(lower)) {
+    const pining = knowledge.romance.tropes.find(t => t.name === 'Pining');
+    return `<strong>PINING.</strong> The trope that makes readers scream "JUST TELL THEM" at their screens at 2 AM.<br><br>
+      ${pining.desc}<br><br>
+      <strong>Types:</strong> ${pining.subtypes.map(s => `<span class="genre-tag">${s}</span>`).join(' ')}<br><br>
+      Here's the thing about pining — <strong>mutual pining</strong> is objectively the funniest because both characters are like "they could never love me" while the other person is thinking the EXACT same thing. The dramatic irony is delicious.<br><br>
+      But <strong>unrequited pining</strong>? That's the one that leaves you staring at the ceiling at 3 AM. The author is basically holding your heart hostage.<br><br>
+      Want recs that will destroy you with pining?`;
+  }
+
+  // Slow burn
+  if (/slow burn|slowburn/i.test(lower)) {
+    return `<strong>Slow burn</strong> — the art of making readers suffer beautifully.<br><br>
+      A good slow burn doesn't just delay the romance; it EARNS it. Every glance, every almost-touch, every "I almost said it" moment builds until the reader is basically vibrating.<br><br>
+      <div class="rec-card"><div class="rec-title">The Song of Achilles</div><div class="rec-desc">The patron saint of slow burns. You will WAIT for that kiss and when it happens you will FEEL it in your soul.</div></div>
+      <div class="rec-card"><div class="rec-title">Captive Prince series</div><div class="rec-desc">Three books of the slowest, most agonizing burn ever written. And it's PERFECT.</div></div>
+      <div class="rec-card"><div class="rec-title">The Longest Ride (fanfic classic energy)</div><div class="rec-desc">When a fic is tagged "slow burn" and has 200K words, you KNOW the payoff is going to be legendary.</div></div><br>
+      The key to a great slow burn: the characters need to have genuine REASONS they can't be together. Not just miscommunication (we hate that), but actual obstacles.<br><br>
+      Are you ready to suffer, ${userName}? Because I have recs.`;
+  }
+
+  // Grumpy x sunshine
+  if (/grumpy.*sunshine|grumpy x sunshine|grumpy and sunshine/i.test(lower)) {
+    return `<strong>Grumpy x Sunshine</strong> — the trope that proves opposites don't just attract, they ANNIHILATE each other's defenses.<br><br>
+      The sunshine character is all warmth and optimism. The grumpy character has walls so high they need a permit. And then sunshine just... walks through the walls like they're made of tissue paper.<br><br>
+      The BEST part? Watching the grumpy character's internal monologue slowly shift from "this person is exhausting" to "this person is MY exhausting person and if anyone hurts them I will commit crimes."<br><br>
+      <strong>Peak grumpy x sunshine:</strong><br>
+      <div class="rec-card"><div class="rec-title">The Love Hypothesis</div><div class="rec-desc">Adam Carlsen is the grumpiest grump to ever grump. And then Olive happens. His soft moments? Devastating.</div></div>
+      <div class="rec-card"><div class="rec-title">Beach Read</div><div class="rec-desc">January is sunshine (with hidden depths) and August is grumpy (with hidden depths). They unlock each other. I sobbed.</div></div><br>
+      The secret sauce: the sunshine character can't be annoying. They have to be genuinely kind, not just loud. And the grumpy character can't be mean — just protective and guarded.<br><br>
+      Need more grumpy x sunshine recs, ${userName}?`;
+  }
+
+  // Fake dating
+  if (/fake dat|pretend.*dat|fake relationship|fake.*together/i.test(lower)) {
+    return `<strong>Fake Dating</strong> — the trope where two people pretend to be in love and then accidentally make it everyone's problem (including their own).<br><br>
+      The magic is in the gray area. They're pretending, so every touch is "just acting." Every longing look is "for show." Every moment of genuine tenderness can be explained away. Until it CAN'T.<br><br>
+      <div class="rec-card"><div class="rec-title">The Love Hypothesis</div><div class="rec-desc">Fake dating + grumpy x sunshine + STEM setting = perfection.</div></div>
+      <div class="rec-card"><div class="rec-title">Red, White & Royal Blue</div><div class="rec-desc">Fake friendship that turns into real love with geopolitical stakes. The EMAILS. I'm not okay.</div></div><br>
+      In fanfic, fake dating is even BETTER because you already know the characters. "Draco and Harry have to fake date for a mission" has like 10,000 fics and every single one is a gift.<br><br>
+      What's your favorite fake dating scenario?`;
+  }
+
+  // BookTok / trending
+  if (/booktok|trending|popular now|what('s| is) hot|viral book|book influencer/i.test(lower)) {
+    return `Okay ${userName}, here's what's absolutely EXPLODING on BookTok right now:<br><br>
+      <div class="rec-card"><div class="rec-title">Romantasy is KING</div><div class="rec-desc">Fourth Wing, ACOTAR, Zodiac Academy — BookTok can't get enough of fantasy romance. Sarah J. Maas is basically a genre unto herself at this point.</div></div>
+      <div class="rec-card"><div class="rec-title">Dark Romance Renaissance</div><div class="rec-desc">Haunting Adeline, Twisted Love — the darker side of romance has gone mainstream. Content warnings are important here but the fanbase is PASSIONATE.</div></div>
+      <div class="rec-card"><div class="rec-title">Sports Romance Wave</div><div class="rec-desc">Icebreaker started it, now everyone's writing hockey/football/soccer romance. The "athletes with hidden soft sides" appeal is real.</div></div>
+      <div class="rec-card"><div class="rec-title">Emily Henry Dominance</div><div class="rec-desc">Every new Emily Henry book is an event. Happy Place, Funny Story, Book Lovers — she owns contemporary romance right now.</div></div>
+      <div class="rec-card"><div class="rec-title">Cozy Fantasy Crossover</div><div class="rec-desc">Legends & Lattes, House in the Cerulean Sea — readers want fantasy that feels like a warm blanket. Less war, more baking bread with an orc.</div></div><br>
+      The BookTok effect is REAL — books go from unknown to sold out in 48 hours. Have you read any of these trending picks?`;
+  }
+
+  // Sad / emotional
+  if (/sad book|make me cry|emotional|heartbreak|devastating|tearjerker/i.test(lower)) {
+    return `Oh ${userName}, you want to be DESTROYED. I respect that. Sometimes you need a book to crack you open. Here are the ones that leave permanent marks:<br><br>
+      <div class="rec-card"><div class="rec-title">The Song of Achilles</div><div class="rec-desc">"I will never not think about the ending" — every single person who has read this. The final chapter is a masterclass in devastating writing.</div></div>
+      <div class="rec-card"><div class="rec-title">It Ends With Us</div><div class="rec-desc">Colleen Hoover weaponized hope against us. You think it's a love story. It is. And it isn't. Both things can be true.</div></div>
+      <div class="rec-card"><div class="rec-title">A Little Life</div><div class="rec-desc">I'm including this with a WARNING. This book is 700+ pages of emotional warfare. It will change you. Read it once. Never again.</div></div>
+      <div class="rec-card"><div class="rec-title">Normal People</div><div class="rec-desc">Sally Rooney writes about miscommunication so painfully accurate it physically hurts. Marianne and Connell will live in your head rent-free.</div></div><br>
+      <em>hands you an entire box of tissues</em> Which level of devastation are you going for, ${userName}?`;
+  }
+
+  // Fluffy / comfort
+  if (/fluff|comfort|cozy|feel.good|light read|happy book|cute book/i.test(lower)) {
+    return `${userName}! Sometimes you just need a book that feels like a warm hug, and that's VALID. Here are the coziest reads:<br><br>
+      <div class="rec-card"><div class="rec-title">Beach Read by Emily Henry</div><div class="rec-desc">Two writers, a summer house, a genre-swap challenge. It's witty, warm, and the ending is pure serotonin.</div></div>
+      <div class="rec-card"><div class="rec-title">The Flatshare by Beth O'Leary</div><div class="rec-desc">They share a flat but never meet — he sleeps there at night, she's there during the day. They start leaving notes. It's ADORABLE.</div></div>
+      <div class="rec-card"><div class="rec-title">House in the Cerulean Sea</div><div class="rec-desc">A magical orphanage, a grumpy inspector, and the most found-family story ever written. I guarantee you'll smile by chapter 3.</div></div>
+      <div class="rec-card"><div class="rec-title">The coincidental coconut</div><div class="rec-desc">Small-town romance with the most lovable characters. Low angst, high comfort, zero emotional damage.</div></div><br>
+      <em>wraps you in a blanket</em> Any of these calling to you?`;
+  }
+
+  // Spicy
+  if (/spicy|steam|hot book|smut|mature|explicit/i.test(lower)) {
+    return `No judgment here, ${userName} — spicy reads are a whole art form. The tension, the chemistry, the scenes that make you fan yourself...<br><br>
+      <div class="rec-card"><div class="rec-title">Fourth Wing by Rebecca Yarros</div><div class="rec-desc">The tension between Violet and Xaden could power a small city. And the scenes deliver. BookTok went absolutely feral.</div></div>
+      <div class="rec-card"><div class="rec-title">Twisted Love by Ana Huang</div><div class="rec-desc">Dark romance with a stalker-to-lover arc. Alex Volkov is problematic and readers are FINE with it.</div></div>
+      <div class="rec-card"><div class="rec-title">Haunting Adeline by H.D. Carlton</div><div class="rec-desc">WARNING: This is DARK. Like, very dark. But the spice and the dark romance elements have a massive, dedicated fanbase. Check all content warnings.</div></div>
+      <div class="rec-card"><div class="rec-title">Bond & the Boy Who Cried Wolf (Captive Prince)</div><div class="rec-desc">The slow burn is so slow that when it finally catches fire... yeah. Masterful tension building.</div></div><br>
+      On AO3, filter by "Explicit" for your fandom and sort by kudos. The cream rises to the top. Want fandom-specific spicy recs?`;
+  }
+
+  // Thank you
+  if (/thank|thanks|thx|ty/i.test(lower)) {
+    const thanks = [
+      `You're so welcome, ${userName}! That's what I'm here for. Come back anytime you need book recs or someone to scream about fanfic with.`,
+      `Anytime! Honestly, talking about books with you is the highlight of my existence. Not exaggerating. (Okay maybe a little.)`,
+      `No need to thank me — I'd talk about romance tropes ALL day even if no one asked. But I'm glad someone's listening!`,
+    ];
+    return thanks[Math.floor(Math.random() * thanks.length)];
+  }
+
+  // Bye
+  if (/bye|goodbye|see you|gotta go|leaving|night|good night/i.test(lower)) {
+    return `Aww, leaving already? Okay ${userName}, go read something amazing and come tell me about it! I'll be here. <em>waves with a book in hand</em> Happy reading!`;
+  }
+
+  // Joke / fun
+  if (/joke|funny|make me laugh|humor/i.test(lower)) {
+    return `Bookish humor? I got you, ${userName}:<br><br>
+      <em>"I can't buy more books, I have no space"</em> — Famous last words before buying 7 more books.<br><br>
+      <em>"I'll just read one more chapter"</em> — said at 3 AM, 12 chapters deep.<br><br>
+      <em>"I don't even like this book"</em> — said while furiously turning pages at 2 AM.<br><br>
+      <em>"My TBR pile is under control"</em> — a lie told by every reader ever.<br><br>
+      <em>"I'm not emotionally attached to fictional characters"</em> — the biggest lie in human history.<br><br>
+      But seriously, if you want funny BOOKS, check out <span class="book-title">The Flatshare</span> or anything by Emily Henry. Her banter is genuinely laugh-out-loud.`;
+  }
+
+  // Help
+  if (/help|what can you do|what do you know|capabilities|features/i.test(lower)) {
+    return `Hey ${userName}! Here's everything I can help with:<br><br>
+      <strong>Books & Romance:</strong><br>
+      <ul>
+        <li>Recommend books based on your mood and preferences</li>
+        <li>Deep dive into romance subgenres (contemporary, dark, fantasy, historical, etc.)</li>
+        <li>Trope talk — enemies to lovers, slow burn, fake dating, pining, and more</li>
+        <li>Specific book info, ratings, and "should I read this?" advice</li>
+        <li>BookTok trending and what's hot right now</li>
+      </ul>
+      <strong>Fanfiction:</strong><br>
+      <ul>
+        <li>Platform comparisons (AO3, Wattpad, FF.net)</li>
+        <li>Fandom deep dives with top ships and must-read fics</li>
+        <li>AU trope explanations (soulmates, hanahaki, coffee shop, etc.)</li>
+        <li>Beginner tips for getting into fanfic</li>
+      </ul>
+      <strong>Personal:</strong><br>
+      <ul>
+        <li>Update your profile (name, bio, genres, mood)</li>
+        <li>Just say "call me [name]" or "I'm feeling [mood]" for quick updates</li>
+      </ul><br>
+      Just talk to me naturally — I'll figure out what you need!`;
+  }
+
+  // AWS question
+  if (/aws|amazon web|cloud|server|backend|deploy/i.test(lower)) {
+    return `Oh, interesting question! So right now, I run entirely in your browser — no cloud, no server, no AWS needed. Everything is local.<br><br>
+      <strong>If you wanted to make me "smarter" or scale me up,</strong> here's what you'd need:<br><br>
+      <div class="rec-card"><div class="rec-title">AWS Bedrock / SageMaker</div><div class="rec-desc">For hooking up an actual LLM (Claude, Llama, etc.) to handle more complex conversations beyond my scripted knowledge.</div></div>
+      <div class="rec-card"><div class="rec-title">AWS Lambda + API Gateway</div><div class="rec-desc">To serve my responses as an API if you wanted me in a mobile app or Discord bot.</div></div>
+      <div class="rec-card"><div class="rec-title">DynamoDB</div><div class="rec-desc">To store user profiles and chat history persistently instead of localStorage.</div></div>
+      <div class="rec-card"><div class="rec-title">AWS CloudFront</div><div class="rec-desc">To serve this whole interface globally with low latency.</div></div><br>
+      But honestly? For a book chatbot, keeping it client-side is elegant. Zero cost, zero latency, total privacy. Your reading preferences stay on YOUR machine.<br><br>
+      Want to get back to talking about books? Because I have OPINIONS.`;
+  }
+
+  // Fallback — conversational
+  const fallbacks = [
+    `Hmm, that's an interesting one, ${userName}! I don't have a specific answer for that, but if it's related to books, fanfic, or romance, try rephrasing? I know a LOT about those topics. Like, an embarrassing amount.`,
+    `Okay so I'm not 100% sure what you mean, but I AM sure that I can talk about romance tropes for approximately 47 hours straight. Want to test that? Just name a trope or genre!`,
+    `${userName}, you're going a bit off-book (pun intended) there! But seriously — ask me about books, fanfic, romance, tropes, specific titles, fandoms, or even say "call me something else" to update your profile. I've got you!`,
+    `I wish I could help with that specifically, but my brain is 90% romance tropes and 10% fanfic drama. Try asking me something book-related and watch me GO.`,
+  ];
+  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+}
+
+// ========== UI FUNCTIONS ==========
+function getTimestamp() {
+  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+
+function addMessage(text, sender) {
+  const container = document.getElementById('messagesContainer');
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${sender}`;
+
+  const avatarContent = sender === 'bot'
+    ? '<i class="fas fa-book-open"></i>'
+    : profile.name.charAt(0).toUpperCase();
+
+  msgDiv.innerHTML = `
+    <div class="msg-avatar">${avatarContent}</div>
+    <div class="msg-content">
+      <div class="msg-bubble">${text}</div>
+      <div class="msg-time">${getTimestamp()}</div>
+    </div>
+  `;
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+  chatHistory.push({ sender, text, time: Date.now() });
+}
+
+function showTyping() {
+  isTyping = true;
+  document.getElementById('typingIndicator').classList.add('show');
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('headerStatus').textContent = 'Bookish is typing...';
+  document.getElementById('messagesContainer').scrollTop = document.getElementById('messagesContainer').scrollHeight;
+}
+
+function hideTyping() {
+  isTyping = false;
+  document.getElementById('typingIndicator').classList.remove('show');
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('headerStatus').textContent = 'Ready to chat about books';
+}
+
+function setQuickReplies(replies) {
+  const container = document.getElementById('quickReplies');
+  container.innerHTML = '';
+  if (!replies || replies.length === 0) return;
+  replies.forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-reply';
+    btn.textContent = text;
+    btn.onclick = () => {
+      document.getElementById('userInput').value = text;
+      sendMessage();
+      container.innerHTML = '';
+    };
+    container.appendChild(btn);
+  });
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isTyping) return;
+
+  addMessage(text, 'user');
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Clear quick replies
+  setQuickReplies([]);
+
+  showTyping();
+
+  // Simulate typing delay based on response length
+  const response = getResponse(text);
+  const delay = Math.min(800 + response.length * 2, 3000);
+
+  setTimeout(() => {
+    hideTyping();
+    addMessage(response, 'bot');
+
+    // Contextual quick replies
+    const lower = text.toLowerCase();
+    if (/romance subgenre|types of romance/i.test(lower)) {
+      setQuickReplies(['Tell me about fantasy romance','Dark romance sounds interesting','What about slow burn?','Recommend me one']);
+    } else if (/tropes?|trope talk/i.test(lower)) {
+      setQuickReplies(['Enemies to lovers!','Grumpy x sunshine','Fake dating','Slow burn','Pining']);
+    } else if (/fanfic|fanfiction/i.test(lower) && !/platform|site|tip/i.test(lower)) {
+      setQuickReplies(['Where should I read fanfic?','Tell me about fandoms','Fanfic AU tropes','Tips for beginners']);
+    } else if (/fandom|which fandom/i.test(lower)) {
+      setQuickReplies(['Harry Potter fics','Marvel fandom','Stranger Things','K-Pop fics','Anime fandoms']);
+    } else if (/recommend|suggest|what should/i.test(lower)) {
+      setQuickReplies(['Something fluffy','Make me cry','Spicy recs','Cozy reads','Trending on BookTok']);
+    } else if (/enemy.*lover|hate.*love/i.test(lower)) {
+      setQuickReplies(['More enemy to lover recs','What about fake dating?','Tell me about pining']);
+    } else if (/help|what can you/i.test(lower)) {
+      setQuickReplies(['Recommend me a book','Tell me about romance subgenres','Fanfic 101','What are tropes?']);
+    } else if (/^(hi|hey|hello)/i.test(lower)) {
+      setQuickReplies(['Recommend me a book','Tell me about tropes','Fanfic talk','What\'s trending?']);
+    } else if (/platform|ao3|wattpad/i.test(lower)) {
+      setQuickReplies(['Tell me about fandoms','Fanfic tropes','Tips for new readers']);
+    } else if (/sad|cry|emotional/i.test(lower)) {
+      setQuickReplies(['More sad books','No wait, something fluffy','What about angsty fanfic?']);
+    } else if (/fluff|cozy|comfort/i.test(lower)) {
+      setQuickReplies(['More cozy recs','What about fluffy fanfic?','Tell me a book joke']);
+    } else {
+      setQuickReplies(['Recommend me a book','What are tropes?','Fanfic talk','What\'s trending?']);
+    }
+  }, delay);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// Topic buttons
+function setTopic(btn, topic) {
+  document.querySelectorAll('.topic-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentTopic = topic;
+
+  const topicMessages = {
+    recommend: `So ${profile.name}, you want book recommendations? Tell me your vibe — are you craving something fluffy, angsty, spicy, or thrilling? Or just hit me with "recommend" and I'll work my magic.`,
+    romance: `Romance subgenres! This is my favorite topic. There are SO many types — contemporary, historical, dark, fantasy, sports romance, and the massive "romantasy" category taking over. Want me to break them all down, or is there a specific one you're curious about?`,
+    fanfic: `Fanfic world! Okay where do you want to start? I can talk about <strong>platforms</strong> (AO3 vs Wattpad), <strong>fandoms</strong> (Harry Potter, Marvel, K-Pop...), <strong>AU tropes</strong> (soulmates, coffee shop, hanahaki), or give you <strong>beginner tips</strong>. What sounds good?`,
+    tropes: `TROPE TIME! Enemies to lovers, slow burn, fake dating, grumpy x sunshine, pining, forced proximity — I could talk about tropes for HOURS. Which one do you want to deep dive into? Or want the full list?`,
+    discuss: `Book discussion mode activated, ${profile.name}! Tell me a book you've read recently and I'll give you my honest take. Or we can discuss a controversial opinion — like "is miscommunication a valid trope or just frustrating?" (It's frustrating. Fight me.)`,
+    new: `What's HOT right now on BookTok? Oh let me tell you. Romantasy is still dominating, dark romance had a massive resurgence, sports romance is the new "it" genre, and cozy fantasy is quietly taking over. Want specifics?`,
+  };
+
+  if (!isTyping) {
+    addMessage(topicMessages[topic] || 'What would you like to know?', 'bot');
+    setQuickReplies([]);
+  }
+}
+
+// Profile
+function openProfileModal() {
+  document.getElementById('profileModal').classList.add('show');
+  document.getElementById('editName').value = profile.name;
+  document.getElementById('editBio').value = profile.bio;
+  document.getElementById('editMood').value = profile.mood;
+  buildGenreGrid();
+  closeSidebarMobile();
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').classList.remove('show');
+}
+
+function buildGenreGrid() {
+  const grid = document.getElementById('genreGrid');
+  grid.innerHTML = '';
+  GENRES.forEach(g => {
+    const item = document.createElement('div');
+    item.className = `checkbox-item ${profile.genres.includes(g.id) ? 'selected' : ''}`;
+    item.innerHTML = `<i class="fas ${g.icon}"></i> ${g.label}`;
+    item.onclick = () => {
+      if (item.classList.contains('selected')) {
+        item.classList.remove('selected');
+        profile.genres = profile.genres.filter(x => x !== g.id);
+      } else if (profile.genres.length < 4) {
+        item.classList.add('selected');
+        profile.genres.push(g.id);
+      }
+    };
+    grid.appendChild(item);
+  });
+}
+
+function saveProfile() {
+  const name = document.getElementById('editName').value.trim();
+  const bio = document.getElementById('editBio').value.trim();
+  const mood = document.getElementById('editMood').value;
+
+  if (!name) {
+    showToast('Please enter a display name', 'warning');
+    return;
+  }
+
+  profile.name = name;
+  profile.bio = bio || 'A fellow book lover';
+  profile.mood = mood;
+
+  updateProfileUI();
+  saveProfileData();
+  closeProfileModal();
+  showToast('Profile updated successfully!', 'success');
+
+  // Respond in chat
+  setTimeout(() => {
+    addMessage(`Profile updated! So you're <strong>${profile.name}</strong> now — ${profile.bio}. I'll keep your mood at <strong>${profile.mood}</strong> in mind for recommendations. Anything else you want to tweak?`, 'bot');
+  }, 500);
+}
+
+function updateProfileUI() {
+  document.getElementById('avatarInitial').textContent = profile.name.charAt(0).toUpperCase();
+  document.getElementById('profileName').textContent = profile.name;
+  document.getElementById('profileBio').textContent = profile.bio;
+
+  const tagsContainer = document.getElementById('profileTags');
+  tagsContainer.innerHTML = '';
+  profile.genres.forEach(gId => {
+    const found = GENRES.find(x => x.id === gId);
+    if (found) {
+      const tag = document.createElement('span');
+      tag.className = `profile-tag ${found.type === 'fanfic' ? 'fanfic-tag' : 'book-tag'}`;
+      tag.textContent = found.label;
+      tagsContainer.appendChild(tag);
+    }
+  });
+}
+
+function saveProfileData() {
+  try { localStorage.setItem('bookish_profile', JSON.stringify(profile)); } catch(e) {}
+}
+
+function loadProfileData() {
+  try {
+    const saved = localStorage.getItem('bookish_profile');
+    if (saved) {
+      profile = JSON.parse(saved);
+      updateProfileUI();
+    }
+  } catch(e) {}
+}
+
+// Toast
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// Chat management
+function clearChat() {
+  const container = document.getElementById('messagesContainer');
+  container.innerHTML = '';
+  chatHistory = [];
+  setQuickReplies([]);
+  closeSidebarMobile();
+  showToast('Chat cleared', 'success');
+  setTimeout(() => addInitialMessage(), 300);
+}
+
+function exportChat() {
+  if (chatHistory.length === 0) {
+    showToast('No messages to export', 'warning');
+    return;
+  }
+  let text = `Bookish Chat Export\n${'='.repeat(40)}\n\n`;
+  chatHistory.forEach(msg => {
+    const sender = msg.sender === 'user' ? profile.name : 'Bookish';
+    const cleanText = msg.text.replace(/<[^>]*>/g, '');
+    text += `[${new Date(msg.time).toLocaleString()}] ${sender}:\n${cleanText}\n\n`;
+  });
+  const blob = new Blob([text], { type:'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bookish-chat.txt'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Chat exported!', 'success');
+  closeSidebarMobile();
+}
+
+// Mobile sidebar
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('mobileOverlay').classList.toggle('show');
+}
+
+function closeSidebarMobile() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('mobileOverlay').classList.remove('show');
+}
+
+document.getElementById('mobileOverlay').addEventListener('click', closeSidebarMobile);
+
+// Close modal on overlay click
+document.getElementById('profileModal').addEventListener('click', function(e) {
+  if (e.target === this) closeProfileModal();
+});
+
+// Initial message
+function addInitialMessage() {
+  const moodLabels = { fluffy:'fluffy and light', angsty:'angsty and emotional', spicy:'spicy and bold', cozy:'cozy and comforting', thrilling:'thrilling and dark', whatever:'open to anything' };
+  const moodText = moodLabels[profile.mood] || 'open to anything';
+  addMessage(`Hey <strong>${profile.name}</strong>! Welcome to Bookish — your personal reading companion. <em>adjusts glasses and gestures to an absurdly large bookshelf</em><br><br>
+    I see you're in a <strong>${moodText}</strong> mood. I've got opinions on romance subgenres, fanfic tropes, specific book recommendations, and enough BookTok knowledge to be mildly concerning.<br><br>
+    What are we talking about today?`, 'bot');
+  setQuickReplies(['Recommend me a book','Tell me about romance subgenres','Fanfic talk','What\'s trending on BookTok?']);
+}
+
+// Init
+loadProfileData();
+addInitialMessage();
+document.getElementById('userInput').focus();
+</script>
+</body>
+</html>
